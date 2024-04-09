@@ -1,0 +1,410 @@
+Scenario 01 :
+-------------  Scenario 1 : When we are trying to insert new record into object. 
+If there is any record existing with same account name it should prevent duplicate record.
+
+
+trigger Scenario01 on Account (before insert, before Update) {
+    
+    set<String> AccNameSet = new Set<String>();
+    
+    for(Account objacc : Trigger.new){
+        
+        if(Trigger.isinsert && Trigger.isbefore){
+            AccNameSet.add(objacc.Name);
+        }
+        if(Trigger.isUpdate && Trigger.isbefore){
+            if(objacc.name != Trigger.oldmap.get(objacc.Id).Name){
+                AccNameSet.add(objacc.Name);
+            }
+        }
+    }
+    Map<String,Account> accMap = new Map<String,Account>();
+    
+    for(Account objacc :[select Id,Name from Account Where Name IN : AccNameSet]){
+        accMap.put(objacc.Name, objacc);
+    }
+    for(Account objacc : Trigger.new){
+        if(accMap.containsKey(objacc.Name)){
+            objacc.Name.AddError('Record having this Name Already Exists...');
+        }
+    }
+    
+}
+_________________________________________________________________________________________________
+
+Scenario 2:
+----------- Write a trigger to prefix Account Name with ‘Mr’ when new record is inserted.
+
+
+trigger Scenario02Applicant on Applicant__c (before insert, before Update) {
+    
+    
+    Set<String> accNameSet = new Set<String>();
+    
+    for(Applicant__c objapp : trigger.new){
+        if(Trigger.isinsert && Trigger.isbefore){
+            if(objapp.Gender__c == 'Male'){
+                objapp.Applicants__c = 'Mr. '+objapp.Applicants__c; 
+            }
+            else if(objapp.Gender__c == 'Female'){
+                objapp.Applicants__c = 'Ms. '+objapp.Applicants__c; 
+            }
+            accNameSet.add(objapp.Applicants__c);
+        }
+        if(Trigger.isUpdate && Trigger.isbefore){
+            if(objapp.Gender__c != Trigger.oldMap.get(objapp.Id).Gender__c){
+                if(objapp.Gender__c == 'Male'){
+                    objapp.Applicants__c = 'Mr. '+objapp.Applicants__c; 
+                }
+                else if(objapp.Gender__c == 'Female'){
+                    objapp.Applicants__c = 'Ms. '+objapp.Applicants__c; 
+                }
+            }
+        }
+    }
+}
+
+_______________________________________________________________________________________________
+
+Scenario 3: 
+-----------  
+Whenever a new record is created into account object . 
+Before this new record is inserted into Account, delete all the contacts records with this account name.
+
+trigger Scenario03Account on Account (before insert, before Update, before delete) {
+    
+    map<string,account> accmap = new map<string,account>();
+    if((trigger.isinsert || trigger.isupdate) && trigger.isbefore){
+        for(account objacc:trigger.new){
+            if(trigger.isinsert && trigger.isbefore){
+                if(!string.isBlank(objacc.name)){
+                    accmap.put(objacc.name,objacc);
+                }
+            }
+            if(trigger.isupdate && trigger.isbefore){ 
+                if(objacc.name!=null){
+                    if(objacc.name!=trigger.oldmap.get(objacc.id).name){
+                        accmap.put(objacc.name,objacc);
+                    }
+                    
+                }
+            }
+        }
+        
+        list<contact> conlist = new list<contact>();
+        if(!accmap.isEmpty()){
+            for(contact objcon:[select id,name from contact where name IN :accmap.keySet()]){
+                conlist.add(objcon);
+            }
+            if(!conlist.isEmpty()){
+                database.delete(conlist,false);
+            }
+            
+        }
+    }
+}
+
+________________________________________________________________________________
+
+Scenario 4:   
+------------
+
+ Whenever a new transaction is performed successfully then update the customer object balance field based on
+If Transaction Type=Deposit, Balance= balance +amount ; withdraw balance= balance-amount;
+Note: Customers and Transaction has lookup Detail Relation.
+
+
+trigger TransactionTrigger30may on Transaction__c (After insert, After Update) {
+    
+    set<Id> CustIdSet = new Set<Id>();
+    if((Trigger.isinsert || Trigger.isUpdate) && Trigger.isAfter){
+        for(Transaction__c objTrans : Trigger.new){
+            if(objTrans.Costomer__c != null){
+                if(Trigger.isInsert && Trigger.isAfter){
+                    CustIdSet.Add(objTrans.Costomer__c);
+                }
+            }
+        }
+    }
+    Map<Id,Costomer__c> custmap = new Map<Id,Costomer__c>();
+    if(!CustIdSet.isEmpty()){
+        for(Costomer__c objcust : [select Id,Total_Balance__c from Costomer__c Where Id In : CustIdSet ]){
+            custmap.put(objcust.Id, objcust);
+            
+        }
+    }
+    
+     if((Trigger.isinsert || Trigger.isUpdate) && Trigger.isAfter){
+    for(Transaction__c objTrans : Trigger.new){
+        if(custmap.containsKey(objTrans.Costomer__c)){
+            if(!custmap.isEmpty()){
+                if(Trigger.isinsert  && Trigger.isAfter){
+                    if(objTrans.Transaction_Type__c == 'Deposit'){
+                        custmap.get(objTrans.Costomer__c).Total_Balance__c =  (custmap.get(objTrans.Costomer__c).Total_Balance__c + objTrans.Amount__c);
+                    } 
+                    else if(objTrans.Transaction_Type__c == 'Withdraw'){
+                        custmap.get(objTrans.Costomer__c).Total_Balance__c =  (custmap.get(objTrans.Costomer__c).Total_Balance__c - objTrans.Amount__c);
+                    }
+                    
+                }
+            }
+            
+            if(Trigger.isUpdate  && Trigger.isAfter){
+                if(objTrans.Transaction_Type__c != Trigger.oldMap.get(objTrans.Id).Transaction_Type__c){
+                    
+                    if(objTrans.Transaction_Type__c == 'Deposit'){
+                        custmap.get(objTrans.Costomer__c).Total_Balance__c =  (custmap.get(objTrans.Costomer__c).Total_Balance__c + objTrans.Amount__c);
+                    } 
+                    else if(objTrans.Transaction_Type__c == 'Withdraw'){
+                        custmap.get(objTrans.Costomer__c).Total_Balance__c =  (custmap.get(objTrans.Costomer__c).Total_Balance__c - objTrans.Amount__c);
+                    }
+                }
+                
+            }
+            
+        }
+    }
+        
+        
+        
+    }
+    database.update(custmap.values(),false);
+
+_______________________________________________________________________________________________________________________________________
+
+Scenario 5:     Whenever a new contact is created for account update the corresponding account phone with the new contact phone field
+------------
+
+
+trigger Scenario05 on Contact (before insert, before Update) {
+    
+    set<Id> accIDset = new Set<Id>();
+    if((Trigger.isinsert || Trigger.isUpdate ) && Trigger.isbefore){
+        for(Contact objcon : trigger.new){
+            if(objcon.AccountId != null){
+                if(Trigger.isinsert && Trigger.isbefore){
+                    accIDset.add(objcon.AccountId);
+                }
+                if(Trigger.isUpdate && Trigger.isbefore){
+                    if(objcon.Phone != Trigger.oldMap.get(objcon.Id).Phone){
+                        accIDset.add(objcon.AccountId);
+                    }
+                } 
+            }
+        }
+        Map<Id,Account> accMap = new Map<Id,Account>();
+        if(!accIDset.isEmpty()){
+            for(Account objacc : [select Id,name,Phone from Account where ID IN :accIDset]){
+                accMap.put(objacc.Id, objacc);
+            }
+        }
+        if(!accMap.isEmpty()){
+            for(Contact objcon : trigger.new){
+                if(accMap.containsKey(objcon.AccountId)){
+                    
+                    accMap.get(objcon.AccountId).Phone = objcon.Phone;    
+                }
+            }
+        }
+        Database.update(accMap.Values(), False);
+    }
+    
+}
+
+_________________________________________________________________________________________________________
+
+Scenario 6:    Whenever customer record is updated, before updating the record create newrecord in test object with old values of customer record.
+------------
+
+
+trigger Scenario06 on Costomer__c (before update) {
+ 
+    List<Test__c> testList = new List<Test__c>();
+    
+    for(Costomer__c objcust : trigger.new){
+        Test__c objTest = new Test__c(Test_Customer_Name__c = objcust.Customer_Name__c, Test_Total_Balance__c = objcust.Total_Balance__c);
+        testList.add(objTest);
+    }
+    Database.insert(testList, false);
+}
+
+________________________________________________________________________________________________________
+
+Scenario 8:
+----------- Write a trigger that will prevent a user from creating a lead that already exists as a contact. We will use the lead /contact email address to detect duplicates.
+Lead is created or updated.
+1. Lead has an email address.
+2. 2. Try to find a matching contact based on email address.(Using SOQL)
+3. If a match is found give an error
+4. If a match is not found do nothing.
+
+-----------------------------
+
+trigger Scenario8 on Lead (before insert, before Update) {
+    
+    set<String> LeadEmailSet = new set<String>();
+    if((Trigger.isinsert || Trigger.isUpdate ) && Trigger.isBefore){
+        for(Lead objLead : Trigger.new){
+            if(Trigger.isinsert && Trigger.isbefore){
+                if(!String.isBlank(objLead.Email)){
+                    LeadEmailSet.add(objLead.Email);
+                }
+            }
+            if(Trigger.isUpdate && Trigger.isbefore){
+                if(objLead.Email != Trigger.oldMap.get(objLead.Id).Email){
+                    LeadEmailSet.add(objLead.Email);
+                }
+            }
+        }
+        Map<String,Contact> ConMap = new Map<String,Contact>();
+        if(!LeadEmailSet.isEmpty()){
+            for(Contact objCon :[Select ID,Email from Contact where Email IN : LeadEmailSet]){
+                ConMap.put(objCon.Email,objCon);
+            }
+        }
+        if(!ConMap.isEmpty()){
+            for(Lead objLead : Trigger.new){
+                if(ConMap.containsKey(objLead.Email)){
+                    objLead.Email.AddError('This Email Alredy Exists In Contact Object');
+                }
+            }
+        }
+        Database.update(ConMap.values(),false);
+        
+    }
+}
+
+_______________________________________________________________________________________________________
+
+Scenario 9: 
+------------When we are trying to delete customer record delete all the corresponding child records from test object,
+ where customer is lookup field in the object.
+
+
+trigger Scenario09 on Costomer__c (before Delete) {
+    
+    Map<Id,Costomer__c> CustMap = new Map<Id,Costomer__c>();
+    for(Costomer__c objcust : Trigger.old){
+        if(objcust.Id != null){
+            CustMap.put(objcust.Id, objcust);
+        }
+    }
+    List<Test__c> TestList = new List<Test__c>();
+    if(!CustMap.isEmpty()){
+        for(Test__c objTest : [select Id, Costomer__c from Test__c where Costomer__c IN :CustMap.keySet()]){
+            TestList.add(objTest);
+        }
+         database.delete(TestList,false);
+    }
+    
+}
+
+_______________________________________________________________________________________________________________
+
+
+Scenario 12:   If we delete any of the existing customer record then first create new test object record with customer record values then delete customer record.
+--------------
+
+
+trigger Scenario12 on Costomer__c (before Delete) {
+    
+    List<Test__c> TestList = new List<Test__c>();
+    
+    for(Costomer__c objCust : Trigger.old){
+        
+        Test__c objTest = new Test__c(Test_Customer_Name__c = objCust.Customer_Name__c,  Test_Total_Balance__c = objCust.Total_Balance__c );
+        TestList.add(objTest);
+    }
+    Database.insert(TestList, false);
+}
+
+____________________________________________________________________________________________________________
+
+Scenario 13:
+------------ Whenever we try to update the phone of account record then update the related contact phone number with the new Account phone number before account record is updated.
+When we delete the account record then delete the corresponding contact records.
+trigger Scenario13000 on Account (before Update, before delete) {
+    
+    Map<Id,Account> accMap = new Map<Id,Account>();
+    if(Trigger.isUpdate && Trigger.isbefore)
+        for(Account objacc : trigger.new){
+            accMap.put(objacc.id,objacc);
+        }
+    
+    if(trigger.isDelete && Trigger.isbefore){
+        for(Account objacc : trigger.old){
+            accMap.put(objacc.id,objacc);
+        }
+    }
+    List<Contact> Conlist = new List<Contact>();
+    
+    for(Contact objCon : [ select Id ,AccountId , Phone from Contact where AccountId IN :accMap.keySet() ]){
+        Conlist.add(objCon);
+    }
+    if((trigger.isUpdate ||trigger.isDelete) && trigger.isBefore){
+        for(Contact objCon : Conlist){
+            if(accMap.containsKey(objCon.AccountId)){
+                if(trigger.isupdate && Trigger.isbefore){
+                    objCon.Phone = accMap.get(objCon.AccountId).Phone;
+                }
+                if(trigger.isdelete && Trigger.isbefore){
+                }
+            }
+        }
+        Database.update(Conlist,false);
+    }
+}
+
+
+__________________________________________________________________________________________________________
+
+Scenario 17 : Scenario 17: Create the field Called ‘Contact Relationship’ 
+checkbox on the contact object and create the object called “Contact Relationship” which is related list to the contact.(Lookup Relationship).
+Now logic is when we create Contact by checking Contact Relationship checkbox then contact relationship will be created automatically for that contact.
+--------------
+
+trigger Scenario17 on Contact (After insert) {
+    
+    
+    List<Contact_Relationship__c> conRelList = new List<Contact_Relationship__c>();
+    
+    for(Contact objCon : Trigger.new){
+        
+        if(objCon.Con_relationship__c == True){
+            Contact_Relationship__c objConRel = new Contact_Relationship__c();
+            objConRel.Contact__c = objCon.Id;
+            conRelList.add(objConRel);
+        }
+        
+    }
+    Database.insert(conRelList,false);
+    
+}
+
+____________________________________________________________________________________________________________
+
+Scenario 19:-
+------------ Create the field Called ‘Contact Relationship’ checkbox on the contact object and
+ create the object called “Contact Relationship” which is related list to the contact.(Lookup Relationship).
+When we delete the contact then contact Relationship will be deleted automatically.
+
+
+trigger Scenario19 on Contact (After delete) {
+    
+        Map<Id,Contact> CustMap = new Map<Id,Contact>();
+    for(Contact objcust : Trigger.old){
+        
+            CustMap.put(objcust.Id, objcust);
+        
+    }
+    List<Contact_Relationship__c> TestList = new List<Contact_Relationship__c>();
+    if(!CustMap.isEmpty()){
+        for(Contact_Relationship__c objTest : [select Id, Contact__c from Contact_Relationship__c where Contact__c IN :CustMap.keySet()]){
+            TestList.add(objTest);
+        }
+         database.delete(TestList,false);
+    }
+
+}
+
+___________________________________________________________________________________________

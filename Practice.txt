@@ -1,0 +1,248 @@
+ When we delete Account record take backup of the Record fields ( Name, Type, Rating ) to the object called AccBackup.
+
+
+Trigger BackUpAccountTrigger on Account (Before Delete){
+
+List<Account_Backup> accBackUpList= new List<Account_Backup> ();
+for(Account objAcc: trigger.old){
+Account_Backup objBackUp= new Account_Backup(AcBackup.Name= objAcc.Name, AcBackup.Type= objAcc.Type, AcBackup.Rating= objAcc.Rating);
+accBackUpList.add(objBackUp);
+}
+if(!accBackUpList.isEmpty())
+Database.Insert(accBackUpList,false);
+}
+=========================================================================================================================
+
+
+Once an Account is inserted an email should go to the System Admin user with specified text below.
+   An account has been created and the name is “Account Name”.
+      (User userObj = [select Id,Profile.Name,Email from user where Profile.Name='System Administrator'];)
+
+Trigger EmailTrigger on Account (After insert){
+
+List<Messaging.SingleEmailMessage> mailList = new List<Messaging.SingleEmailMessage>(); 
+
+(User userObj = [select Id,Profile.Name,Email from user where Profile.Name='System Administrator']);
+
+for(Account objAcc: trigger.new){
+if(!string.isBlank(objAcc.Email)){
+(User userObj = [select Id,Profile.Name,Email from user where Profile.Name='System Administrator']);
+	Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+            mail.setToAddresses(new String[] {'userObj.Email'});
+            mail.setSenderDisplayName('Silver Micro');
+            mail.setSubject('Account Rating Status');
+            mail.setPlainTextBody('Success '+successIDSet+'\n'+' Failed ID = '+failureIDSet);
+            mailList.add(mail);
+       
+    if(!mailList.isEmpty()){
+        Messaging.sendEmail(mailList);
+    }
+
+
+}
+}
+
+}
+====================================================================================
+
+Trigger CreateContactTrigger on Account(After Insert){
+List<Contact> conlist= new List<Contact>();
+for(Account objAcc : trigger.new){
+for(Integer i=0; i<=4; i++){
+Contact objCon= new Contact();
+objCon.FirstName= 'Neetin';
+objCon.LastName= 'Modi';
+objCon.AccountId= objAcc.Id;
+conlist.add(objCon);
+}
+Database.Insert(conlis,false);
+
+}
+}
+
+Write a trigger on the Account when the Account is updated check all opportunities related to the account. 
+Update all Opportunities Stage to close lost if an opportunity created date is greater than 30 days from today and stage not equal to close won.
+
+
+Trigger TestTrigger on Account(After Update){
+
+Map<Id,Account> accMap = new Map<Id,Account>();
+
+for(Account objAcc : trigger.new){
+accMap.put(objAcc.Id, objAcc);
+	}
+
+List<Opportunity> oppList = new List<Opportunity>();
+if(!accMap.isEmpty()){
+for(Opportunity objOpp : [select Id, Name , CreatedDate from Opportunity where AccountId IN : accMap.keySet() ]){
+oppList.add(objOpp);
+		}
+	}
+
+if(!oppList.isEmpty()){
+for(Opportunity objOpp : oppList){
+
+Date CreatedDate = objOpp.CreatedDate;
+Date today = Date.today();
+integer numberOfdays = CreatedDate.daysBetween(today);
+
+if(accMap.ContainsKey(objOpp.AccountId)){
+if(objOpp.StageName != 'Closed Won' &&  numberOfdays >= 30){
+objOpp.StageName = 'Closed lost';
+				}
+			}
+		}
+	}
+Database.update(oppList, false);
+}
+
+===========================================================================================
+Record Create by LDS 
+HTML
+
+<template>
+	<lightning-card title= 'Create Contact Record'>
+		<lightning-record-form object-api-name= {contactObject} field= {myFields} onsuccess= {contactCreateHandler}></lightning-record-form>
+	</lightning-card>
+</template>
+
+JS
+import CONTACT_OBJECT from '@salesforce/schema/Contact';
+import FIRSTNAME_FIELD from '@salesforce/schema/Contact.FirstName';
+import LASTNAME_FIELD from '@salesforce/schema/Contact.LastName';
+import ACCOUNT_FIELD from '@salesforce/schema/Contact.AccountId';
+
+export default.....{
+contactObject= CONTACT_OBJECT;
+myFields= [FIRSTNAME_FIELD,LASTNAME_FIELD,ACCOUNT_FIELD];
+
+contactCreateHandler(){
+console.log('Record has been created...!!');
+	}
+}
+
+==========================================================================================
+
+Create Record through Custom way
+
+HTML
+<template>
+	<lightning-card title = 'Record Information'>
+		<lightning-input type= 'text' data-formfield= "firstName" label= "Enter your First Name"></lightning-input><br/>
+		<lightning-input type= 'text' data-formfield= "lastName" label= "Enter your Last Name" required= true></lightning-input><br/>
+		<lightning-button variant= "brand" icon=name= "utility:search" label= "Submit" onclick= {recordCreateHandler}></lightning-button>
+	</lightning-card>
+</template>
+
+JS
+
+import getAccountDetails from '@salesforce/apex/AccountProvider.getAccountDetails';
+
+export default.....{
+objAcc= {'sObjectType':'Account'};
+recordCreateHandler(){
+this.objAcc.FirstName= this.template.querySelector('lightning-input[data-formfield= "firstName"]').value;
+this.objAcc.LastName= this.template.querySelector('lightning-input[data-formfield= "lastName"]').value;
+
+getAccountDetails({objAccount:this.objAcc})
+.then((result) =>{
+console.log(result);
+})
+
+.catch((error) =>{
+console.log(error);
+});
+		}
+
+	}
+
+}
+
+
+Apex class
+
+@AuraEnabled
+
+public static getAccountDetails (Account objAccount){
+try{
+if(objAccount != null){
+insert objAccount;
+return 'Record has been Created Successfully...!!'
+
+}
+else{
+return 'There is Problem....!!!'
+}
+
+}
+catch{
+
+}
+}
+
+====================================================================================================
+*)Whenever a new record is created into account object . Before this new record is inserted into Account, delete all the contacts records with this account name.
+
+trigger DeleteSameContact on Account (before insert) {
+    Map<String,Account> accMap= new Map<String,Account>();
+    for(Account objAcc: trigger.new){
+        if(!String.isBlank(objAcc.Name)){
+            accMap.put(objAcc.Name,objAcc);
+        }
+    }
+    if(!accMap.isEmpty()){
+        List<Contact> conList= new List<Contact>();
+        for(Contact objCon: [Select Id,Name from Contact where Name IN:accMap.keySet()]){
+            conList.add(objCon);
+        }
+        Database.Delete(conList,false);
+    } 
+    
+}
+
+========================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

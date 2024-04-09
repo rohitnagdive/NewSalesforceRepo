@@ -1,0 +1,344 @@
+
+
+Combo Box
+
+HTML
+<lightning-combobox
+            name="gender"
+            label="Enter Gender"
+            value={gender}
+            placeholder="Select Gender"
+            options={options}
+            onchange={handleChange} ></lightning-combobox>
+
+JS
+
+get options() {
+        return [
+            { label: 'Male', value: 'Male' },
+            { label: 'Female', value: 'Female' },
+            { label: 'Transgender', value: 'Transgender' },
+        ];
+    }
+
+    handleChange(event) {
+        this.Gender__c = event.detail.value;
+    }
+
+==============================================
+
+In JS
+import { CloseActionScreenEvent} from 'lightning/actions';
+
+handleSave(){-----------------------> (Jo Button Hogi us k Methode me Likhna)
+this.dispatchEvent(new CloseActionScreenEvent());
+}
+
+________________________________________-
+--------------------DATA Table------
+html--------
+
+  <lightning-datatable
+                        key-field="id"
+                        data={receivedData}
+                        columns={columns}>
+                         </lightning-datatable>
+
+----------JS
+export default ....{
+
+ columns = [
+        { label: 'Passport ID', fieldName: 'Name', editable=true },
+        { label: 'Issue Date',  fieldName: 'issue_Date__c' },
+        { label: 'Expiry Date',  fieldName: 'Expiry_Date__c' },
+        { label: 'Status', fieldName: 'status__c'},
+    ];
+-------------------------------------------------------------------
+If Condition
+
+<template if:true={showTable}>
+
+</template>
+
+------------------------------------------------------
+Input Field : HTML
+
+<lightning-input  data-formfield="accountName"  type="text" label="Enter Account Name" name="accName"> </lightning-input> <br />
+<lightning-button variant= "brand" icon-name= "utility:search" label= "Search" onclick = {accountCreateHandler}></lightning-button>
+
+________________________________________________________________________________________________________________________
+
+JS Controller:
+
+Get Input Data:
+this.template.querySelector('lightning-input[data-formfield="accountName"]').value;
+
+___________________________________________________________________________________________________________________________
+---------------------------------------TOAST message
+
+Import method in JS class :
+import { ShowToastEvent } from 'lightning/platformShowToastEvent' ; 
+
+Use code After REsult:
+.then(result =>{
+    this.showSuccessToast("Record has been Updated", 'success');
+
+})
+========
+showSuccessToast() {
+        const evt = new ShowToastEvent({
+            title: 'Record has been Updated',
+            message: this.result,
+            variant: 'success',
+            mode: 'dismissable'
+        });
+        this.dispatchEvent(evt);
+    }
+____________________________________________________________________________
+---------------------------------------SPINNER CODE
+<template if:true={showSpinner}>
+<div class="exampleHolder">
+        <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+</div>
+</template>
+
+
+----------
+4] HTML Template Conditional Statement 
+
+<template if:true={value}>
+         My Name is Lakhan..!!!       
+</template>
+
+
+<template if:false={value}>
+         Pushpa / Pushparaj hai mai…!!!! Fire       
+</template>
+
+_______________________________________________________________________________
+To give Space between two button Use :
+
+--------------&nbsp-----------------
+
+___________________________________________________
+Disable{ButtonEnableDisbleFlag}
+
+To make Button Dynamic ..OR Not Permanent Disable.
+
+________________________________________________________________________________
+
+---------------------------------------Table Script
+--------------
+
+<table aria-describedby="conatact-list" class="slds-table  slds-table_bordered ">
+
+            <!--Header of the table-->
+            <thead>
+                <tr class="slds-line-height_reset">
+                    <th class="slds-size_1-of-6 " scope="col">
+                        <div class="slds-truncate " title="Account Name">Account Name</div>
+                    </th>
+                    <th class="slds-size_1-of-6 " scope="col">
+                        <div class="slds-truncate " title="Account Type">Type</div>
+                    </th>
+               </tr>
+            </thead>
+
+            <!--Body of the table-->
+            <tbody>
+               
+                   <template for:each={accList} for:item="acc">
+                        <tr key={acc.id}>
+                              <td>
+                                    {acc.Name}
+                              </td>  
+
+                              <td>
+                                {acc.Type}
+                            </td>  
+                        </tr>
+
+                   </template>
+                    
+                
+            </tbody>
+        </table>
+
+
+____________________________________________________________________________________________________________________
+
+------------------------------------------PubSub file--------------------------------------
+
+const store={};
+
+const subscribe = (eventName,callback) =>{
+        if(!store[eventName]){
+        store[eventName] = new Set();
+        }
+        store[eventName].add(callback);
+};
+
+const unsubscribe = (eventName,callback) =>{
+        if(store[eventName]){
+        store[eventName].delete(callback);
+        }
+};
+
+const publish = (eventName, payLoad) =>{
+        if(store[eventName]){
+        store[eventName].forEach(callback => {
+            try{
+            callback(payLoad);
+            }
+            catch(error){
+            console.log(error);
+            }
+});
+}
+};
+
+export default{
+        subscribe,
+        unsubscribe,
+        publish
+
+}
+
+____________________________________________________________________________
+
+To Call method Automatically in CHild Compo
+
+connectedCallback(){
+        this.receivedDataHandler()
+    }
+
+    receivedDataHandler(){
+        pubsub.subscribe("eventName" , (message) => {
+           this.receivedData = message
+        });
+    }
+
+__________________________________________________________________
+
+
+
+To Show Any Object  Record Field On Details Page  without Apex Class
+1. Import All...... IN JS
+import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
+
+import CREATED_FIELD from '@salesforce/schema/Account.CreatedDate';
+import SLA_FIELD from '@salesforce/schema/Account.SLA__c';
+
+const fields = [REVENUE_FIELD, CREATED_FIELD, EXP_FIELD,SLA_FIELD];
+
+export default class WireTest extends LightningElement {
+  @api recordId;
+  @wire(getRecord, { recordId: '$recordId', fields })
+    account;
+	
+	
+	get created() {
+        return getFieldValue(this.account.data, CREATED_FIELD);
+    }
+	
+	get sla(){
+        return getFieldValue(this.account.data,SLA_FIELD);
+    }
+	
+	
+}
+
+_____________________________________________________________________
+
+
+AURA Datatable - 
+
+DATA TABLE WILL REQUIRE A LIST:
+
+Syntax:
+Component:
+
+<lightning:datatable
+                keyField="id"
+                data="{! v.data }"
+                columns="{! v.columns }"
+                hideCheckboxColumn="true"/>
+
+
+-----------
+JS Controller - 
+
+		component.set('v.columns', [
+            {label: 'Applicant ID', fieldName: 'Name', type: 'text'},
+            {label: 'First Name', fieldName: 'First_Name__c', type: 'text'},
+            {label: 'Last Name', fieldName: 'Last_Name__c', type: 'text'},
+            {label: 'Gender', fieldName: 'Gender__c', type: 'text'}
+        ]);
+
+__________________________________________________________________________________
+
+SOSL QUERY......
+
+List<List<sObject>> searchList = [FIND 'SFDC' IN ALL FIELDS RETURNING Account(Name), Contact(FirstName, LastName)];
+
+system.debug('Received data ='+searchList);
+
+OUTPUT _ - 20:03:23:074 USER_DEBUG [3]|DEBUG|Received data =((Account:{Name=SFDC, Id=0015j00000j7aqvAAA, RecordTypeId=0125j0000009kMaAAI}), 
+(Contact:{LastName=SFDC, Id=0035j00000Z7GyuAAF}))
+
+______________________________________________________________________________________-
+
+Ternary operator..........
+
+string result = age>=18 ? 'True' : 'false';
+system.debug(result);
+
+
+_______________________________________________________________________________
+
+Try....Catch Block
+
+try{
+Integer x=1, y=0;
+
+integer z = x / y;
+
+System.debug(z);
+}
+catch(Exception ex){
+    System.debug(ex.getMessage());
+}
+
+OUTPUT - Divided by 0;
+__________________________________________________________________________
+
+Email Code--------
+
+   List<Messaging.SingleEmailMessage> mailList = new List<Messaging.SingleEmailMessage>();       
+       
+       		Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+            mail.setToAddresses(new String[] {'silvermicrosystems@gmail.com'});
+            mail.setSenderDisplayName('Silver Micro');
+            mail.setSubject('Account Rating Status');
+            mail.setPlainTextBody('Success '+successIDSet+'\n'+' Failed ID = '+failureIDSet);
+            mailList.add(mail);
+       
+    if(!mailList.isEmpty()){
+        Messaging.sendEmail(mailList);
+    }
+
+
+_____________________________________________________________________________________________________________
+
+TO FETCH PARENT RECORD DATA FOM CHILD SOQL 
+
+List<Research_Paper__c> resPepList = [select Id, Status__c, Account__r.Journal_Email_Address__c from Research_Paper__c where Status__c = 'Published'];
+
+system.Debug('Result = '+resPepList);
+
+for(Research_Paper__c obj : resPepList){
+    
+    string AccountId = obj.Account__r.Journal_Email_Address__c;
+    system.debug('AccountId ='+AccountId);
+}
+______________________________________________________________________________________________________-__
