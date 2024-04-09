@@ -1,0 +1,11 @@
+1) Explain your Project
+2) Integration Scenario
+3) Write a Trigger for duplicate Account Name and Write a Test Class
+4) How Many Flows are there in Salesforce
+5) diff between With Sharing and Without sharing
+6) diff between Batch and Queueable
+7) How many ways we can share the record
+8) What is promise object and diff Stages
+9) How we call Aplex class in lwc
+10) What are diff Methods of Batch Apex
+11) What is Invoking

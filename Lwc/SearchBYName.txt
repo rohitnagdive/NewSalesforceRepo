@@ -1,0 +1,101 @@
+HTML
+<template>
+    
+    <lightning-card title="Contact List By Account Id" >
+        <lightning-input label="Search First Name"
+                         class="slds-p-around_x-small"
+                         onchange={handleChange}
+                         type="search"
+                         value={searchKey}
+                        >
+       </lightning-input>
+            
+                <lightning-datatable key-field="id"
+                                     data={contactdata}
+                                    columns={columns}
+                                    onrowselection={handleSelectedRow}>
+             </lightning-datatable>
+            </lightning-card>
+  </template>
+===============================================
+JS
+import { LightningElement, api, } from 'lwc';
+
+import fetchContactRecord from '@salesforce/apex/accountProvider.fetchContactRecord';
+const columns = [
+    { label: 'Account Id', fieldName: 'AccountId', type: 'text' , sortable: true },
+    { label: 'Phone',  fieldName: 'Phone', type: 'text' , sortable: true},
+    { label: 'First Name',  fieldName: 'FirstName', type: 'text' , sortable: true},
+    { label: 'Last Name',  fieldName: 'LastName', type: 'text' , sortable: true},
+    { label: 'Email Id', fieldName: 'Email',type: 'text' , sortable: true}
+];
+
+export default class ConListByRecordId extends LightningElement {
+
+@api recordId;
+contactdata
+searchKey='';
+columns=columns;
+
+connectedCallback(){
+    fetchContactRecord ({accId: this.recordId, searchValue:this.searchKey})
+    .then(result =>{
+        this.contactdata= result;
+        console.log(' this.contactdata :' +JSON.stringify( this.contactdata));
+
+
+    })
+    .catch(error =>{
+        console.log(' error :' +JSON.stringify(error));
+
+    });
+}
+handleSelectedRow(event){
+   const selectedRow= event.detail.selectedRows;
+   console.log('selectedRow:' +JSON.stringify(selectedRow));
+
+}
+
+handleChange(event){
+ this.searchKey = event.target.value;
+ console.log(' this.searchKey :' +JSON.stringify( this.searchKey));
+ fetchContactRecord ({accId: this.recordId, searchValue:this.searchKey})
+    .then(result =>{
+        this.contactdata= result;
+        console.log(' this.contactdata :' +JSON.stringify( this.contactdata));
+
+
+    })
+    .catch(error =>{
+        console.log(' error :' +JSON.stringify(error));
+
+    });
+
+}
+
+}
+============================
+Apex Class
+
+public with sharing class accountProvider {
+ @AuraEnabled(cacheable=true)
+        public static List<Contact> fetchContactRecord(String accId, string searchValue){
+    if(searchValue != '' && searchValue != null){
+        String key = '%'+ searchValue +'%';
+
+        List<Contact> conList =[Select Id, AccountId,FirstName, LastName, Email,Phone From Contact
+            where AccountId =:accId AND FirstName LIKE : key];
+            if(!conList.isEmpty()){
+                return conList;
+
+            }
+            return null;
+
+    }
+    else {
+        List<Contact> conList =[Select Id, AccountId,FirstName, LastName, Email,Phone From Contact
+            where AccountId =:accId];
+            return conList;
+    }    
+}
+}

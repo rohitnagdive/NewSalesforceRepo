@@ -1,0 +1,137 @@
+HTML
+
+<template>
+    <lightning-card title="All Account Details">
+        <lightning-input type="search"
+                         class="slad-p-around_x-small" 
+                         label="Search By Account Name"
+                         onchange={handleSearchChange} 
+                         value={searchName}
+                         placeholder="Enter Account Name"> 
+        </lightning-input> <br />
+
+        <lightning-datatable key-field="Id"
+                            data={data}
+                            columns={columns}
+                            onsave={handleSave}
+                            show-row-number-column
+                            draft-values={draftValue}
+                            >
+       </lightning-datatable>
+
+    </lightning-card>
+    
+</template>
+=======================================
+JS
+import { LightningElement } from 'lwc';
+import getAllAccountRecords from '@salesforce/apex/AccProvider.getAllAccountRecords';
+import searchByName from '@salesforce/apex/AccProvider.searchByName';
+import updateContactDetail from '@salesforce/apex/AccProvider.updateContactDetail';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent' ; 
+
+
+const columns=[
+    { label: 'Account Name', fieldName: 'Name', editable:true },
+    { label: 'Rating', fieldName: 'Rating', editable:true },
+    { label: 'Website', fieldName: 'Website', editable:true },
+    { label: 'Type', fieldName: 'Type', editable:true }
+];
+
+
+export default class SearchAllAccountByName extends LightningElement {
+
+data='';
+columns=columns;
+searchName;
+draftValue=[];
+
+connectedCallback(){
+    getAllAccountRecords()
+    .then((result) =>{
+        this.data=result;
+        console.log('this.data : ' +JSON.stringify( this.data));
+    
+    })
+    .catch((error) =>{
+        console.log('error');
+
+    })
+}
+handleSearchChange(event){
+    this.searchName=event.target.value;
+    console.log('this.searchName : ' +JSON.stringify( this.searchName));
+
+
+    searchByName({AccName: this.searchName})
+    .then((result) =>{
+        this.data=result;
+        console.log('this.data : ' +JSON.stringify( this.data));
+    
+    })
+    .catch((error) =>{
+        console.log('error');
+
+    })
+
+}
+handleSave(event){
+    const updateField = event.detail.draftValues;
+
+    updateContactDetail({accData:updateField})
+.then(result =>{
+    console.log('result :' +JSON.stringify(result));
+    this.showSuccessToast("Record has been Updated", 'success');
+    
+
+})
+.catch(error =>{
+    this.showSuccessToast("Record failed to Updated", 'error');
+
+});
+}
+showSuccessToast() {
+    const evt = new ShowToastEvent({
+        title: 'Record has been Updated',
+        message: this.result,
+        variant: 'success',
+        mode: 'dismissable'
+    });
+    this.dispatchEvent(evt);
+}
+
+}
+========================
+Apex Class
+ @AuraEnabled
+    public static List<Account> getAllAccountRecords(){
+        try {
+            return [Select Name,Rating,Website,Type From Account LIMIT 20];
+
+            
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+    @AuraEnabled
+    public static List<Account> searchByName(String AccName){
+        try {
+            String key= '%' +AccName+ '%' ;
+            return [Select Name,Rating,Website,Type From Account where Name LIKE :key ];
+
+            
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+
+@AuraEnabled
+    public static String updateContactDetail(object accData){
+        List<Account> accList= (List<Account>)JSON.deserialize(JSON.serialize(accData), List<Account>.class);
+        if(!accList.isEmpty()){
+            update accList;
+            return 'Successfully Update Account';
+        }
+        
+            return 'Failed';
+    }
